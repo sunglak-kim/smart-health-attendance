@@ -189,6 +189,7 @@ let cooldownUntil = 0;
 let sending = false;
 let registering = false;
 let msgTimer = null;
+let ready = false;
 
 const detectorOptions = () => new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 });
 
@@ -324,6 +325,7 @@ function drawBox(result) {
 
 /* ---------- 얼굴 등록 ---------- */
 async function registerFace() {
+  if (!ready) { showMessage('아직 준비 중입니다', '화면 위 메시지가 "카메라를 바라봐 주세요"로 바뀐 뒤 다시 누르세요.', 'warn', 4000); return; }
   const existingId = regExisting.value;
   const name = document.getElementById('regName').value.trim();
   const consent = document.getElementById('regConsent').checked;
@@ -336,23 +338,23 @@ async function registerFace() {
   btn.disabled = true;
   showMessage('정면을 바라봐 주세요', '얼굴을 3번 촬영합니다.');
 
-  const samples = [];
-  let tries = 0;
-  while (samples.length < 3 && tries < 20) {
-    tries++;
-    const r = await faceapi.detectSingleFace(video, detectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    drawBox(r);
-    if (r) { samples.push(r.descriptor); bar.style.width = (samples.length / 3 * 100) + '%'; }
-    await new Promise(res => setTimeout(res, 600));
-  }
+  try {
+    const samples = [];
+    let tries = 0;
+    while (samples.length < 3 && tries < 20) {
+      tries++;
+      const r = await faceapi.detectSingleFace(video, detectorOptions()).withFaceLandmarks().withFaceDescriptor();
+      drawBox(r);
+      if (r) { samples.push(r.descriptor); bar.style.width = (samples.length / 3 * 100) + '%'; }
+      await new Promise(res => setTimeout(res, 600));
+    }
 
-  if (samples.length < 3) {
-    showMessage('얼굴을 찾지 못했습니다', '밝은 곳에서 카메라 정면을 보고 다시 시도하세요.', 'err', 5000);
-  } else {
-    const avg = Array.from({ length: 128 }, (_, i) => samples.reduce((s, d) => s + d[i], 0) / samples.length);
-    try {
+    if (samples.length < 3) {
+      showMessage('얼굴을 찾지 못했습니다', '밝은 곳에서 카메라 정면을 보고 다시 시도하세요.', 'err', 5000);
+    } else {
+      const avg = Array.from({ length: 128 }, (_, i) => samples.reduce((s, d) => s + d[i], 0) / samples.length);
       const r = await apiPost({ action: 'register', id: existingId || '', name, consent: true, descriptor: avg });
-      if (!r.ok) showMessage('등록 실패', r.message, 'err', 5000);
+      if (!r.ok) showMessage('등록 실패', r.message, 'err', 6000);
       else {
         showMessage(`${r.name}님 ${r.updated ? '재등록' : '등록'} 완료`, `이용자번호 ${r.id}`, 'ok', 5000);
         document.getElementById('regName').value = '';
@@ -360,13 +362,14 @@ async function registerFace() {
         regExisting.value = '';
         await loadUsers();
       }
-    } catch (e) {
-      showMessage('연결 오류', '인터넷 연결 또는 웹앱 주소를 확인하세요.', 'err', 5000);
     }
+  } catch (e) {
+    showMessage('등록 중 오류', '오류 내용: ' + (e && e.message ? e.message : e), 'err');
+  } finally {
+    bar.style.width = '0';
+    btn.disabled = false;
+    registering = false;
   }
-  bar.style.width = '0';
-  btn.disabled = false;
-  registering = false;
 }
 
 /* ---------- 화면 전환 ---------- */
@@ -399,6 +402,9 @@ document.getElementById('reloadBtn').onclick = async () => {
 
 /* ---------- 시작 ---------- */
 async function init() {
+  if (typeof faceapi === 'undefined') {
+    showMessage('인식 기능 파일을 받지 못했습니다', '인터넷 연결을 확인하고 새로고침하세요.', 'err'); return;
+  }
   if (API_URL.indexOf('script.google.com') === -1) {
     showMessage('웹앱 주소가 없습니다', 'index.html 맨 위 설정의 API_URL에 Apps Script 웹앱 주소를 넣으세요.', 'err');
     return;
@@ -410,15 +416,16 @@ async function init() {
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
   } catch (e) {
-    showMessage('인식 기능을 불러오지 못했습니다', '인터넷 연결을 확인하고 새로고침하세요.', 'err'); return;
+    showMessage('인식 기능을 불러오지 못했습니다', '오류 내용: ' + (e && e.message ? e.message : e), 'err'); return;
   }
   try {
     video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
   } catch (e) {
-    showMessage('카메라를 사용할 수 없습니다', '브라우저에서 카메라 권한을 허용하세요.', 'err'); return;
+    showMessage('카메라를 사용할 수 없습니다', '카메라 권한을 허용하세요. 오류 내용: ' + (e && e.message ? e.message : e), 'err'); return;
   }
   try { await loadUsers(); }
-  catch (e) { showMessage('시트에 연결하지 못했습니다', '웹앱 주소와 배포 권한(모든 사용자)을 확인하세요.', 'err'); return; }
+  catch (e) { showMessage('시트에 연결하지 못했습니다', '웹앱 주소와 배포 권한을 확인하세요. 오류 내용: ' + (e && e.message ? e.message : e), 'err'); return; }
+  ready = true;
   idleMessage();
   loop();
 }
