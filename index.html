@@ -221,13 +221,26 @@ const detectorOptions = () => new faceapi.TinyFaceDetectorOptions({ inputSize: 2
 /* 얼굴 인식 1회 (한 번에 하나만 실행, 시간 제한 포함) */
 let running = null;
 let lastDetectMs = 0;
-async function detectOnce(timeoutMs) {
+let missStreak = 0;
+let switchedToCpu = false;
+const snap = document.createElement('canvas');
+
+function grabFrame() {
+  const w = video.videoWidth || 640, h = video.videoHeight || 480;
+  snap.width = w; snap.height = h;
+  snap.getContext('2d').drawImage(video, 0, 0, w, h);
+  return snap;
+}
+
+async function detectOnce(timeoutMs, size) {
   if (running) { try { await running; } catch (e) {} }
   const t0 = performance.now();
+  const opts = new faceapi.TinyFaceDetectorOptions({ inputSize: size || 320, scoreThreshold: 0.3 });
   const job = (async () => {
     try {
-      const r = await faceapi.detectSingleFace(video, detectorOptions()).withFaceLandmarks(true).withFaceDescriptor();
+      const r = await faceapi.detectSingleFace(grabFrame(), opts).withFaceLandmarks(true).withFaceDescriptor();
       lastDetectMs = performance.now() - t0;
+      missStreak = r ? 0 : missStreak + 1;
       return r;
     } finally {
       running = null;
@@ -236,6 +249,21 @@ async function detectOnce(timeoutMs) {
   running = job;
   const timer = new Promise((_, rej) => setTimeout(() => rej(new Error('인식 시간 초과(' + Math.round(timeoutMs / 1000) + '초)')), timeoutMs));
   return Promise.race([job, timer]);
+}
+
+/* 그래픽 처리(webgl)에서 얼굴을 계속 못 찾으면 호환 모드(cpu)로 한 번 전환 */
+async function maybeSwitchToCpu() {
+  if (switchedToCpu || missStreak < 4 || faceapi.tf.getBackend() === 'cpu') return false;
+  switchedToCpu = true;
+  showMessage('호환 모드로 전환합니다', '잠시 기다려 주세요.', 'warn');
+  await faceapi.tf.setBackend('cpu');
+  await faceapi.tf.ready();
+  missStreak = 0;
+  return true;
+}
+
+function backendName() {
+  return (faceapi.tf && faceapi.tf.getBackend) ? faceapi.tf.getBackend() : '-';
 }
 
 /* ---------- 화면 메시지 ---------- */
@@ -295,7 +323,7 @@ async function loadUsers() {
 function updateCount() {
   const faceCount = users.filter(u => Array.isArray(u.descriptor)).length;
   document.getElementById('todayCount').textContent =
-    `등록 이용자 ${users.length}명 (얼굴 등록 ${faceCount}명) · 오늘 출석 ${attendedToday.size}명 · 처리 방식 ${(faceapi.tf && faceapi.tf.getBackend) ? faceapi.tf.getBackend() : '-'} · 1회 ${(lastDetectMs / 1000).toFixed(1)}초`;
+    `등록 이용자 ${users.length}명 (얼굴 등록 ${faceCount}명) · 오늘 출석 ${attendedToday.size}명 · 처리 방식 ${backendName()} · 1회 ${(lastDetectMs / 1000).toFixed(1)}초`;
 }
 
 /* ---------- 출석 처리 ---------- */
@@ -346,9 +374,9 @@ async function attendByButton() {
     let found = null, faces = 0;
     for (let i = 1; i <= 5 && !found; i++) {
       showMessage('카메라를 바라봐 주세요', `인식 중입니다 (${i}/5)`);
-      const r = await detectOnce(60000);
+      const r = await detectOnce(60000, 416);
       drawBox(r);
-      if (!r) continue;
+      if (!r) { if (await maybeSwitchToCpu()) i = 0; continue; }
       faces++;
       const best = matcher.findBestMatch(r.descriptor);
       if (best.label !== 'unknown') found = best;
@@ -369,7 +397,7 @@ async function attendByButton() {
 async function loop() {
   try {
     if (mode === 'attend' && !sending && !registering && Date.now() > cooldownUntil && video.readyState >= 2) {
-      const r = await detectOnce(60000);
+      const r = await detectOnce(60000, 320);
       drawBox(r);
       if (r && matcher) {
         const best = matcher.findBestMatch(r.descriptor);
@@ -402,6 +430,7 @@ function drawBox(result) {
   const b = result.detection.box;
   ctx.lineWidth = Math.max(3, w / 160);
   ctx.strokeStyle = '#7fd1a5';
+  ctx.setLineDash([]);
   ctx.strokeRect(b.x, b.y, b.width, b.height);
 }
 
@@ -425,11 +454,13 @@ async function registerFace() {
     let tries = 0;
     while (samples.length < 3 && tries < 15) {
       tries++;
-      showMessage('정면을 바라봐 주세요', `촬영 ${samples.length}/3 · 시도 ${tries}/15` + (lastDetectMs ? ` · 1회 ${(lastDetectMs / 1000).toFixed(1)}초` : ''));
-      const r = await detectOnce(60000);
+      showMessage('정면을 바라봐 주세요',
+        `촬영 ${samples.length}/3 · 시도 ${tries}/15 · ${backendName()}` + (lastDetectMs ? ` · 1회 ${(lastDetectMs / 1000).toFixed(1)}초` : ''));
+      const r = await detectOnce(60000, 416);
       drawBox(r);
       if (r) { samples.push(r.descriptor); bar.style.width = (samples.length / 3 * 100) + '%'; }
-      await new Promise(res => setTimeout(res, 400));
+      else if (await maybeSwitchToCpu()) { tries = 0; }
+      await new Promise(res => setTimeout(res, 300));
     }
 
     if (samples.length < 3) {
