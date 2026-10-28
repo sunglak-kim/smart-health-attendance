@@ -63,10 +63,12 @@
     aspect-ratio: 4 / 3;
     align-self: start;
   }
-  video, canvas {
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; }
+  #preview, #overlay {
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; transform: scaleX(-1);
   }
+  .btn.huge { width: 100%; font-size: 1.6rem; padding: 22px; border-radius: 16px; }
   .guide {
     position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 3 / 4;
     transform: translate(-50%, -52%);
@@ -106,6 +108,13 @@
   label.check input { width: 22px; height: 22px; margin-top: 2px; flex: none; }
   .count { font-size: 1rem; color: var(--sub); }
   .hidden { display: none !important; }
+  .pinwrap {
+    position: fixed; inset: 0; background: rgba(29,43,36,0.55);
+    display: flex; align-items: center; justify-content: center; z-index: 50;
+  }
+  .pinbox { background: var(--card); border-radius: 20px; padding: 26px; width: min(90vw, 380px); }
+  .pinbox h2 { margin: 0 0 14px; font-size: 1.3rem; }
+  .pinbox .err { color: var(--red); min-height: 1.4em; margin: 8px 0 0; }
   .progress { height: 10px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 12px; }
   .progress i { display: block; height: 100%; width: 0; background: var(--green); transition: width .3s; }
 </style>
@@ -125,6 +134,7 @@
 <main>
   <div class="stage">
     <video id="video" autoplay muted playsinline></video>
+    <canvas id="preview"></canvas>
     <canvas id="overlay"></canvas>
     <div class="guide"></div>
   </div>
@@ -136,6 +146,8 @@
     </div>
 
     <!-- 출석 모드 -->
+    <button id="attendBtn" class="btn huge">출석하기</button>
+
     <div id="attendPanel" class="box">
       <h2>얼굴 인식이 안 될 때</h2>
       <select id="manualSelect"><option value="">이름을 선택하세요</option></select>
@@ -166,12 +178,25 @@
   </div>
 </main>
 
+<div id="pinWrap" class="pinwrap hidden">
+  <div class="pinbox">
+    <h2>관리자 비밀번호</h2>
+    <input type="password" id="pinInput" inputmode="numeric" placeholder="비밀번호">
+    <p class="err" id="pinErr"></p>
+    <div class="row">
+      <button id="pinOk" class="btn">확인</button>
+      <button id="pinCancel" class="btn ghost">취소</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ===================== 설정 ===================== */
 const API_URL = 'https://script.google.com/macros/s/AKfycbyiHYb9cF6gTg9ejhXA20x8xijYemFY1AbDAyqyFEtsMeKRYy1FUwMEOk7AUke-1aFz/exec';   // Apps Script 웹앱 배포 URL
 const ADMIN_PIN = '1234';                           // 등록 화면 비밀번호 (꼭 바꾸세요)
 const MATCH_THRESHOLD = 0.45;                       // 낮을수록 엄격 (0.4~0.55 권장)
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+const AUTO_MODE = false;                            // true: 카메라 앞에 서면 자동 출석 / false: 출석하기 버튼을 눌러야 인식
 /* ================================================ */
 
 const video = document.getElementById('video');
@@ -193,9 +218,22 @@ let ready = false;
 
 const detectorOptions = () => new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 });
 
-/* 얼굴 인식 1회 (시간 제한 포함) */
-function detectOnce(timeoutMs) {
-  const job = faceapi.detectSingleFace(video, detectorOptions()).withFaceLandmarks().withFaceDescriptor();
+/* 얼굴 인식 1회 (한 번에 하나만 실행, 시간 제한 포함) */
+let running = null;
+let lastDetectMs = 0;
+async function detectOnce(timeoutMs) {
+  if (running) { try { await running; } catch (e) {} }
+  const t0 = performance.now();
+  const job = (async () => {
+    try {
+      const r = await faceapi.detectSingleFace(video, detectorOptions()).withFaceLandmarks(true).withFaceDescriptor();
+      lastDetectMs = performance.now() - t0;
+      return r;
+    } finally {
+      running = null;
+    }
+  })();
+  running = job;
   const timer = new Promise((_, rej) => setTimeout(() => rej(new Error('인식 시간 초과(' + Math.round(timeoutMs / 1000) + '초)')), timeoutMs));
   return Promise.race([job, timer]);
 }
@@ -210,7 +248,7 @@ function showMessage(big, small, type, holdMs) {
   if (holdMs) msgTimer = setTimeout(idleMessage, holdMs);
 }
 function idleMessage() {
-  if (mode === 'attend') showMessage('카메라를 바라봐 주세요', '얼굴이 인식되면 자동으로 출석됩니다.');
+  if (mode === 'attend') showMessage(AUTO_MODE ? '카메라를 바라봐 주세요' : '출석하기 버튼을 눌러 주세요', AUTO_MODE ? '얼굴이 인식되면 자동으로 출석됩니다.' : '버튼을 누른 뒤 카메라 정면을 바라보면 출석됩니다.');
   else showMessage('얼굴 등록', '이름을 입력하고 동의 여부를 확인한 뒤 등록을 시작하세요.');
 }
 
@@ -257,26 +295,27 @@ async function loadUsers() {
 function updateCount() {
   const faceCount = users.filter(u => Array.isArray(u.descriptor)).length;
   document.getElementById('todayCount').textContent =
-    `등록 이용자 ${users.length}명 (얼굴 등록 ${faceCount}명) · 오늘 출석 ${attendedToday.size}명 · 처리 방식 ${(faceapi.tf && faceapi.tf.getBackend) ? faceapi.tf.getBackend() : '-'}`;
+    `등록 이용자 ${users.length}명 (얼굴 등록 ${faceCount}명) · 오늘 출석 ${attendedToday.size}명 · 처리 방식 ${(faceapi.tf && faceapi.tf.getBackend) ? faceapi.tf.getBackend() : '-'} · 1회 ${(lastDetectMs / 1000).toFixed(1)}초`;
 }
 
 /* ---------- 출석 처리 ---------- */
 async function attend(id, method, score) {
   const user = users.find(u => u.id === id);
   if (!user) return;
-  if (attendedToday.has(id)) {
-    showMessage(`${user.name}님`, '오늘은 이미 출석하셨습니다.', 'warn', 4000);
-    cooldownUntil = Date.now() + 4000;
-    return;
-  }
   sending = true;
   try {
     const r = await apiPost({ action: 'attend', id, method, score });
     if (!r.ok) { showMessage('출석 실패', r.message, 'err', 5000); return; }
     attendedToday.add(id);
     updateCount();
-    if (r.duplicate) showMessage(`${r.name}님`, '오늘은 이미 출석하셨습니다.', 'warn', 4000);
-    else showMessage(`${r.name}님, 반갑습니다`, `${r.time} 출석되었습니다.`, 'ok', 5000);
+    if (r.duplicate && r.reason === 'gap') {
+      showMessage(`${r.name}님`, `방금 출석하셨습니다. 다음 출석은 ${r.waitMin}분 뒤에 가능합니다.`, 'warn', 5000);
+    } else if (r.duplicate) {
+      showMessage(`${r.name}님`, `오늘은 이미 ${r.maxPerDay}번 출석하셨습니다. ${r.month}월 ${r.monthCount}번째 방문까지 기록되어 있습니다.`, 'warn', 5000);
+    } else {
+      const todayText = r.todayCount > 1 ? ` 오늘 ${r.todayCount}번째 출석입니다.` : '';
+      showMessage(`${r.name}님, 반갑습니다`, `${r.month}월 ${r.monthCount}번째 방문입니다.${todayText} (${r.time})`, 'ok', 6000);
+    }
   } catch (e) {
     showMessage('연결 오류', '인터넷 연결 또는 웹앱 주소를 확인하세요.', 'err', 5000);
   } finally {
@@ -285,11 +324,52 @@ async function attend(id, method, score) {
   }
 }
 
-/* ---------- 인식 루프 ---------- */
+/* ---------- 카메라 미리보기 ---------- */
+const preview = document.getElementById('preview');
+function drawPreview() {
+  const w = video.videoWidth, h = video.videoHeight;
+  if (w) {
+    if (preview.width !== w) { preview.width = w; preview.height = h; }
+    preview.getContext('2d').drawImage(video, 0, 0, w, h);
+  }
+  requestAnimationFrame(drawPreview);
+}
+
+/* ---------- 버튼 출석 ---------- */
+async function attendByButton() {
+  if (!ready) { showMessage('아직 준비 중입니다', '잠시 후 다시 눌러 주세요.', 'warn', 3000); return; }
+  if (sending || registering) return;
+  if (!matcher) { showMessage('등록된 얼굴이 없습니다', '얼굴 등록 화면에서 이용자를 먼저 등록하세요.', 'warn', 4000); return; }
+  const btn = document.getElementById('attendBtn');
+  btn.disabled = true;
+  try {
+    let found = null, faces = 0;
+    for (let i = 1; i <= 5 && !found; i++) {
+      showMessage('카메라를 바라봐 주세요', `인식 중입니다 (${i}/5)`);
+      const r = await detectOnce(60000);
+      drawBox(r);
+      if (!r) continue;
+      faces++;
+      const best = matcher.findBestMatch(r.descriptor);
+      if (best.label !== 'unknown') found = best;
+      else if (faces >= 2) break;
+    }
+    if (found) await attend(found.label, '얼굴인식', Math.round((1 - found.distance) * 100) / 100);
+    else if (faces) showMessage('등록되지 않은 얼굴입니다', '담당자에게 등록을 요청하거나 수동 출석을 이용하세요.', 'warn', 5000);
+    else showMessage('얼굴이 보이지 않습니다', '카메라 정면에서 다시 출석하기를 눌러 주세요.', 'warn', 5000);
+  } catch (e) {
+    showMessage('인식 중 오류', '오류 내용: ' + (e && e.message ? e.message : e), 'err', 6000);
+  } finally {
+    setTimeout(() => drawBox(null), 1500);
+    btn.disabled = false;
+  }
+}
+
+/* ---------- 자동 인식 루프 (AUTO_MODE = true 일 때만) ---------- */
 async function loop() {
   try {
     if (mode === 'attend' && !sending && !registering && Date.now() > cooldownUntil && video.readyState >= 2) {
-      const r = await detectOnce(15000);
+      const r = await detectOnce(60000);
       drawBox(r);
       if (r && matcher) {
         const best = matcher.findBestMatch(r.descriptor);
@@ -306,12 +386,7 @@ async function loop() {
           showMessage('등록되지 않은 얼굴입니다', '담당자에게 등록을 요청하거나 수동 출석을 이용하세요.', 'warn', 4000);
           cooldownUntil = Date.now() + 3000;
         }
-      } else if (r && !matcher) {
-        showMessage('등록된 얼굴이 없습니다', '얼굴 등록 화면에서 이용자를 먼저 등록하세요.', 'warn', 4000);
-        cooldownUntil = Date.now() + 4000;
       }
-    } else if (mode !== 'attend' || Date.now() <= cooldownUntil) {
-      if (!registering) drawBox(null);
     }
   } catch (e) { console.error(e); }
   setTimeout(loop, 500);
@@ -350,8 +425,8 @@ async function registerFace() {
     let tries = 0;
     while (samples.length < 3 && tries < 15) {
       tries++;
-      showMessage('정면을 바라봐 주세요', `촬영 ${samples.length}/3 · 시도 ${tries}/15`);
-      const r = await detectOnce(20000);
+      showMessage('정면을 바라봐 주세요', `촬영 ${samples.length}/3 · 시도 ${tries}/15` + (lastDetectMs ? ` · 1회 ${(lastDetectMs / 1000).toFixed(1)}초` : ''));
+      const r = await detectOnce(60000);
       drawBox(r);
       if (r) { samples.push(r.descriptor); bar.style.width = (samples.length / 3 * 100) + '%'; }
       await new Promise(res => setTimeout(res, 400));
@@ -381,22 +456,54 @@ async function registerFace() {
 }
 
 /* ---------- 화면 전환 ---------- */
-function setMode(m) {
-  if (m === 'register' && mode !== 'register') {
-    const pin = prompt('관리자 비밀번호를 입력하세요');
-    if (pin !== ADMIN_PIN) { if (pin !== null) alert('비밀번호가 맞지 않습니다.'); return; }
-  }
+function applyMode(m) {
   mode = m;
   document.getElementById('tabAttend').classList.toggle('on', m === 'attend');
   document.getElementById('tabRegister').classList.toggle('on', m === 'register');
   document.getElementById('attendPanel').classList.toggle('hidden', m !== 'attend');
   document.getElementById('registerPanel').classList.toggle('hidden', m !== 'register');
+  document.getElementById('attendBtn').classList.toggle('hidden', m !== 'attend' || AUTO_MODE);
   cooldownUntil = 0;
+  resumeCamera();
   idleMessage();
 }
+function setMode(m) {
+  if (m === 'register' && mode !== 'register') {
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinErr').textContent = '';
+    document.getElementById('pinWrap').classList.remove('hidden');
+    setTimeout(() => document.getElementById('pinInput').focus(), 50);
+    return;
+  }
+  applyMode(m);
+}
+function checkPin() {
+  if (document.getElementById('pinInput').value === ADMIN_PIN) {
+    document.getElementById('pinWrap').classList.add('hidden');
+    applyMode('register');
+  } else {
+    document.getElementById('pinErr').textContent = '비밀번호가 맞지 않습니다.';
+  }
+}
+document.getElementById('pinOk').onclick = checkPin;
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPin(); });
+document.getElementById('pinCancel').onclick = () => {
+  document.getElementById('pinWrap').classList.add('hidden');
+  resumeCamera();
+};
+
+/* 카메라가 멈추면 다시 재생 */
+function resumeCamera() {
+  if (video.srcObject && video.paused) video.play().catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) resumeCamera(); });
+window.addEventListener('focus', resumeCamera);
+setInterval(resumeCamera, 2000);
+
 document.getElementById('tabAttend').onclick = () => setMode('attend');
 document.getElementById('tabRegister').onclick = () => setMode('register');
 document.getElementById('regBtn').onclick = registerFace;
+document.getElementById('attendBtn').onclick = attendByButton;
 document.getElementById('manualBtn').onclick = () => {
   const id = manualSelect.value;
   if (!id) { showMessage('이름을 선택하세요', '', 'err', 3000); return; }
@@ -420,7 +527,7 @@ async function init() {
   try {
     await Promise.all([
       faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
       faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
     ]);
   } catch (e) {
@@ -428,19 +535,21 @@ async function init() {
   }
   try {
     video.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 }, audio: false });
+    await video.play();
+    drawPreview();
   } catch (e) {
     showMessage('카메라를 사용할 수 없습니다', '카메라 권한을 허용하세요. 오류 내용: ' + (e && e.message ? e.message : e), 'err'); return;
   }
   showMessage('준비 중입니다', '얼굴 인식 기능을 처음 실행하고 있습니다. 태블릿에서는 30초~1분 걸릴 수 있습니다.');
   await new Promise(res => { if (video.readyState >= 2) res(); else video.onloadeddata = () => res(); });
   try {
-    await detectOnce(90000);
+    await detectOnce(120000);
   } catch (e) {
     // GPU 방식이 안 되면 CPU 방식으로 전환
     try {
       await faceapi.tf.setBackend('cpu'); await faceapi.tf.ready();
       showMessage('준비 중입니다', '호환 모드로 다시 준비하고 있습니다. 조금 더 기다려 주세요.');
-      await detectOnce(90000);
+      await detectOnce(120000);
     } catch (e2) {
       showMessage('얼굴 인식을 실행할 수 없습니다', '오류 내용: ' + (e2 && e2.message ? e2.message : e2), 'err'); return;
     }
@@ -448,8 +557,9 @@ async function init() {
   try { await loadUsers(); }
   catch (e) { showMessage('시트에 연결하지 못했습니다', '웹앱 주소와 배포 권한을 확인하세요. 오류 내용: ' + (e && e.message ? e.message : e), 'err'); return; }
   ready = true;
+  if (AUTO_MODE) document.getElementById('attendBtn').classList.add('hidden');
   idleMessage();
-  loop();
+  if (AUTO_MODE) loop();
 }
 init();
 </script>
