@@ -199,7 +199,7 @@ const AUTO_MODE = false;                     // true: 카메라 앞에 서면 �
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.7.0/dist/';
 const BACKENDS = ['wasm', 'webgl', 'cpu'];   // 앞에서부터 시도 (태블릿은 wasm이 가장 안정적)
-const APP_VERSION = '2026-10-29';
+const APP_VERSION = '2026-10-29b';
 /* ================================================ */
 
 const video = document.getElementById('video');
@@ -486,6 +486,14 @@ async function registerFace() {
   const consent = document.getElementById('regConsent').checked;
   if (!existingId && !name) { showMessage('이름을 입력하세요', '', 'err', 3000); return; }
   if (!consent) { showMessage('동의 확인이 필요합니다', '동의서를 받은 뒤 체크하세요.', 'err', 3000); return; }
+  if (!existingId) {
+    const key = name.replace(/\s/g, '');
+    const dup = users.find(u => String(u.name).replace(/\s/g, '') === key);
+    if (dup) {
+      showMessage('이미 등록된 이름입니다', `${dup.name} (${dup.id}) · 같은 사람이면 아래 목록에서 선택해 재등록하고, 동명이인이면 이름 뒤에 구분을 붙여 주세요 (예: 홍길동A).`, 'err', 8000);
+      return;
+    }
+  }
 
   registering = true;
   const btn = document.getElementById('regBtn');
