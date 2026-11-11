@@ -68,7 +68,32 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: cover; transform: scaleX(-1);
   }
-  .btn.huge { width: 100%; font-size: 1.6rem; padding: 22px; border-radius: 16px; }
+  .btn.huge {
+    width: 100%; font-size: 2.8rem; padding: 40px 22px; border-radius: 24px; letter-spacing: -0.02em;
+    box-shadow: 0 7px 0 #1f4a36; transition: transform .08s, box-shadow .08s;
+  }
+  .btn.huge:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 2px 0 #1f4a36; }
+
+  /* 출석 축하 화면 */
+  .celebrate {
+    position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+    background: rgba(29, 43, 36, 0.72); animation: celFade .25s ease-out;
+  }
+  .celebrate canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .cel-card {
+    position: relative; text-align: center; background: var(--card); border-radius: 32px;
+    padding: 40px 56px 44px; width: min(92vw, 640px); box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    animation: celPop .45s cubic-bezier(.2, 1.5, .4, 1);
+  }
+  .cel-name { font-size: 2.4rem; font-weight: 700; letter-spacing: -0.02em; }
+  .cel-label { font-size: 1.4rem; color: var(--sub); margin-top: 18px; }
+  .cel-count { font-size: 7.5rem; font-weight: 700; line-height: 1; color: var(--green); letter-spacing: -0.04em; margin-top: 4px; }
+  .cel-count small { font-size: 2.4rem; margin-left: 6px; letter-spacing: -0.02em; }
+  .cel-cheer { font-size: 2.2rem; font-weight: 700; color: var(--amber); margin-top: 22px; }
+  .cel-milestone { font-size: 1.3rem; font-weight: 600; color: var(--ink); background: var(--amber-soft); border-radius: 999px; display: inline-block; padding: 8px 20px; margin-top: 16px; }
+  .cel-hint { font-size: 1rem; color: var(--sub); margin-top: 22px; }
+  @keyframes celFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes celPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .guide {
     position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 3 / 4;
     transform: translate(-50%, -52%);
@@ -92,7 +117,41 @@
     background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 20px 22px;
   }
   .box h2 { margin: 0 0 12px; font-size: 1.1rem; font-weight: 600; }
-  select, input[type=text], input[type=password] {
+  /* 이용 신청서 */
+  .apply {
+    grid-column: 1 / -1; justify-self: center; width: 100%; max-width: 980px;
+    background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 26px 30px 30px;
+  }
+  .apply h2 { margin: 0; font-size: 1.7rem; text-align: center; letter-spacing: -0.01em; }
+  .apply .sub { text-align: center; color: var(--sub); margin: 6px 0 20px; }
+  .req { color: var(--red); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .form-grid .full { grid-column: 1 / -1; }
+  .lbl { display: block; font-weight: 600; margin-bottom: 6px; font-size: 1.05rem; }
+  .lbl small { font-weight: 400; color: var(--sub); }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1; font: inherit; font-size: 1.1rem; padding: 12px 10px; border: 2px solid var(--line);
+    border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer;
+  }
+  .seg button.on { border-color: var(--green); background: var(--green-soft); font-weight: 700; }
+  .rules, .consent { border-radius: 14px; padding: 14px 18px; margin-top: 16px; line-height: 1.6; }
+  .rules { background: #f6f2e9; }
+  .rules ol { margin: 6px 0 0; padding-left: 1.4em; }
+  .consent { border: 2px solid var(--line); }
+  .consent h3 { margin: 0 0 8px; font-size: 1.15rem; }
+  .consent table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: .98rem; }
+  .consent th { text-align: left; color: var(--sub); font-weight: 600; width: 22%; padding: 4px 8px 4px 0; vertical-align: top; }
+  .consent td { padding: 4px 0; }
+  .sign-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
+  .sign-head .when { color: var(--sub); }
+  #signPad { display: block; width: 100%; height: 210px; margin-top: 8px; border: 2px dashed var(--sub); border-radius: 14px; background: #fff; touch-action: none; }
+  .btn.small { font-size: 1rem; padding: 9px 16px; }
+  .ap-status { min-height: 1.5em; margin: 14px 0 0; font-weight: 600; color: var(--red); text-align: center; }
+  .ap-status.ok { color: var(--green); }
+  @media (max-width: 820px) { .form-grid { grid-template-columns: 1fr; } .apply { padding: 20px 16px 24px; } }
+
+  select, input[type=text], input[type=password], input[type=tel], input[type=date] {
     width: 100%; font: inherit; font-size: 1.1rem; padding: 12px 14px;
     border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink);
   }
@@ -129,6 +188,7 @@
 <nav>
   <button id="tabAttend" class="on">출석</button>
   <button id="tabRegister">얼굴 등록 (관리자)</button>
+  <button id="tabApply">이용 신청 (관리자)</button>
 </nav>
 
 <main>
@@ -180,7 +240,64 @@
       <p class="count">카메라 정면을 보고 3초간 움직이지 마세요. 기존 이용자를 선택하면 얼굴 데이터만 다시 저장합니다. 생체인식정보에 동의하지 않은 분은 등록하지 않고 수동 출석으로 이용합니다.</p>
     </div>
   </div>
+
+  <!-- 이용 신청서 모드 -->
+  <section id="applyView" class="apply hidden">
+    <h2>스마트건강증진실 이용 신청서</h2>
+    <p class="sub">신청인이 직접 확인하고 서명합니다. <span class="req">*</span> 표시는 꼭 입력하세요.</p>
+    <div class="form-grid">
+      <div><label class="lbl" for="apName">성명 <span class="req">*</span></label><input type="text" id="apName" autocomplete="off"></div>
+      <div><label class="lbl" for="apBirth">생년월일 <span class="req">*</span></label><input type="date" id="apBirth"></div>
+      <div><span class="lbl">성별 <span class="req">*</span></span>
+        <div class="seg" data-name="gender"><button type="button" data-v="남">남</button><button type="button" data-v="여">여</button></div></div>
+      <div><label class="lbl" for="apPhone">연락처 <span class="req">*</span></label><input type="tel" id="apPhone" inputmode="tel" placeholder="010-0000-0000" autocomplete="off"></div>
+      <div><label class="lbl" for="apDisability">장애유형/급</label><input type="text" id="apDisability" placeholder="예: 지체 / 심하지 않음" autocomplete="off"></div>
+      <div><span class="lbl">이용료 구분 <span class="req">*</span> <small>(담당자 선택)</small></span>
+        <div class="seg" data-name="category"><button type="button" data-v="장애인">장애인</button><button type="button" data-v="비장애인">비장애인</button><button type="button" data-v="감면">감면</button></div></div>
+      <div class="full"><label class="lbl" for="apAddress">주소</label><input type="text" id="apAddress" autocomplete="off"></div>
+    </div>
+
+    <div class="rules">
+      <b>○ 이용규칙 및 유의사항</b>
+      <ol id="apRules"></ol>
+      <label class="check"><input type="checkbox" id="apAgreeRules"><span>위의 내용에 동의하며, 스마트건강증진실 이용을 신청합니다. <span class="req">*</span></span></label>
+    </div>
+
+    <div class="consent">
+      <h3>개인정보 수집·이용 동의 <span class="req">(필수)</span></h3>
+      <table id="apPrivacyText"></table>
+      <div class="seg" data-name="privacy"><button type="button" data-v="동의">동의합니다</button><button type="button" data-v="미동의">동의하지 않습니다</button></div>
+    </div>
+
+    <div class="consent">
+      <h3>생체인식정보(얼굴) 수집·이용 동의 (선택)</h3>
+      <table id="apBioText"></table>
+      <div class="seg" data-name="bio"><button type="button" data-v="동의">동의합니다</button><button type="button" data-v="미동의">동의하지 않습니다</button></div>
+    </div>
+
+    <div class="sign-head">
+      <span class="lbl" style="margin:0">신청인 서명 <span class="req">*</span> <small>아래 칸에 손가락으로 서명해 주세요</small></span>
+      <span class="when" id="apDate"></span>
+      <button type="button" class="btn ghost small" id="signClear">다시 쓰기</button>
+    </div>
+    <canvas id="signPad"></canvas>
+
+    <p class="ap-status" id="apStatus"></p>
+    <div class="row"><button type="button" class="btn huge" id="apSubmit">신청서 제출</button></div>
+  </section>
 </main>
+
+<div id="celebrate" class="celebrate hidden">
+  <canvas id="confetti"></canvas>
+  <div class="cel-card">
+    <div class="cel-name" id="celName"></div>
+    <div class="cel-label" id="celLabel"></div>
+    <div class="cel-count"><span id="celNum"></span><small>번째 방문</small></div>
+    <div class="cel-cheer" id="celCheer"></div>
+    <div class="cel-milestone hidden" id="celMilestone"></div>
+    <div class="cel-hint">화면을 누르면 닫힙니다</div>
+  </div>
+</div>
 
 <div id="pinWrap" class="pinwrap hidden">
   <div class="pinbox">
@@ -201,6 +318,33 @@ const ADMIN_PIN = '1234';                           // 등록 화면 비밀번�
 const MATCH_THRESHOLD = 0.45;                       // 낮을수록 엄격 (0.4~0.55 권장)
 const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
 const AUTO_MODE = false;                            // true: 카메라 앞에 서면 자동 출석 / false: 출석하기 버튼을 눌러야 인식
+const CELEBRATE = true;                             // 출석하면 축하 화면(n번째 방문, 응원 문구, 꽃가루) 보이기
+const FANFARE_SOUND = false;                        // true로 바꾸면 축하 화면에서 빵빠레 소리가 남
+const CELEBRATE_MS = 4500;                          // 축하 화면이 떠 있는 시간(밀리초)
+const CHEERS = ['오늘도 화이팅!', '건강한 하루 보내세요!', '꾸준함이 최고예요!', '오늘도 멋져요!', '함께 힘내요!', '잘 오셨어요!'];
+
+/* 이용 신청서 문구 (한글 신청서 양식과 같게). 고치면 태블릿 화면과 저장되는 PDF 모두 바뀝니다. */
+const APPLY_RULES = [
+  '1개월 이용 중 최소 2회 이상을 출석하시기 바랍니다.',
+  '운동화를 지참하여 환복 후 운동을 해주시기 바랍니다.',
+  '2개월 이상 결석 시 이용이 불가함을 알려드립니다.',
+  '이용시간을 준수해 주시기 바랍니다. (10:00~17:00)',
+  '사물함은 이용료(연 10,000원)을 납부하고 이용 가능합니다. 키를 분실하는 경우 직접 복사하셔야 합니다.',
+  '귀중품 보관은 특히 유의해주시기 바라며, 분실 시 복지관에서는 책임지지 않습니다.'
+];
+/* 개인정보 동의 문구: 기관 개인정보 담당자와 확인 후 고쳐 쓰세요 */
+const PRIVACY_TEXT = {
+  '수집 항목': '성명, 생년월일, 성별, 장애유형/급, 연락처, 주소, 서명',
+  '이용 목적': '스마트건강증진실 이용 관리, 출석 확인, 이용료 안내 문자 발송',
+  '보유 기간': '이용 종료 시까지 (종료 후 지체 없이 파기)',
+  '거부 권리': '동의를 거부할 수 있으나, 거부 시 스마트건강증진실 이용 신청이 어렵습니다.'
+};
+const BIO_TEXT = {
+  '수집 항목': '얼굴 특징값 (얼굴 사진은 저장하지 않습니다)',
+  '이용 목적': '얼굴인식 출석 확인',
+  '보유 기간': '이용 종료 시 즉시 파기',
+  '거부 권리': '동의하지 않아도 이용에 불이익이 없으며, 출석은 담당자 확인(수동 출석)으로 합니다.'
+};
 /* ================================================ */
 
 const video = document.getElementById('video');
@@ -328,6 +472,7 @@ async function attend(id, method, score) {
     } else {
       const todayText = r.todayCount > 1 ? ` 오늘 ${r.todayCount}번째 출석입니다.` : '';
       showMessage(`${r.name}님, 반갑습니다`, `${r.month}월 ${r.monthCount}번째 방문입니다.${todayText} (${r.time})`, 'ok', 6000);
+      celebrate(r);
     }
   } catch (e) {
     showMessage('연결 오류', '인터넷 연결 또는 웹앱 주소를 확인하세요.', 'err', 5000);
@@ -336,6 +481,98 @@ async function attend(id, method, score) {
     cooldownUntil = Date.now() + 5000;
   }
 }
+
+/* ---------- 출석 축하 화면 (n번째 방문 / 응원 / 꽃가루 / 빵빠레) ---------- */
+const celWrap = document.getElementById('celebrate');
+const confettiCanvas = document.getElementById('confetti');
+let celTimer = null, confettiRaf = null, audioCtx = null;
+
+/* 아이패드는 사용자가 화면을 누른 순간에만 소리를 켤 수 있어서, 버튼을 누를 때 미리 준비 */
+function unlockAudio() {
+  if (!FANFARE_SOUND) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) { audioCtx = null; }
+}
+document.addEventListener('pointerdown', unlockAudio, { once: true });
+
+function playFanfare() {
+  if (!FANFARE_SOUND || !audioCtx) return;
+  try {
+    const t0 = audioCtx.currentTime + 0.05;
+    // 빠-바-바-밤! (도-미-솔-높은도)
+    [[523.25, 0, 0.14], [659.25, 0.15, 0.14], [783.99, 0.30, 0.14], [1046.5, 0.45, 0.6]].forEach(([freq, at, len]) => {
+      [1, 2].forEach(mult => {
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.type = mult === 1 ? 'triangle' : 'sine';
+        osc.frequency.value = freq * mult;
+        const vol = mult === 1 ? 0.28 : 0.06;
+        gain.gain.setValueAtTime(0.0001, t0 + at);
+        gain.gain.exponentialRampToValueAtTime(vol, t0 + at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + at + len);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t0 + at);
+        osc.stop(t0 + at + len + 0.05);
+      });
+    });
+  } catch (e) {}
+}
+
+function runConfetti(ms) {
+  const ctx = confettiCanvas.getContext('2d');
+  const W = confettiCanvas.width = window.innerWidth;
+  const H = confettiCanvas.height = window.innerHeight;
+  const colors = ['#2f6b4f', '#b5651d', '#e8b04a', '#d9644a', '#4a8fd9', '#8fc9a8'];
+  const pieces = Array.from({ length: 160 }, () => ({
+    x: W / 2 + (Math.random() - 0.5) * W * 0.3,
+    y: H * 0.55,
+    vx: (Math.random() - 0.5) * 18,
+    vy: -(10 + Math.random() * 14),
+    w: 8 + Math.random() * 8, h: 5 + Math.random() * 6,
+    rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  }));
+  const start = performance.now();
+  cancelAnimationFrame(confettiRaf);
+  (function frame(now) {
+    const t = now - start;
+    ctx.clearRect(0, 0, W, H);
+    pieces.forEach(p => {
+      p.vy += 0.45; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - t / ms);
+      ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+    if (t < ms) confettiRaf = requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, W, H);
+  })(start);
+}
+
+function celebrate(r) {
+  if (!CELEBRATE) return;
+  const n = r.monthCount;
+  document.getElementById('celName').textContent = `${r.name}님, 반갑습니다`;
+  document.getElementById('celLabel').textContent = `${r.month}월`;
+  document.getElementById('celNum').textContent = n;
+  document.getElementById('celCheer').textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+  const ms = document.getElementById('celMilestone');
+  if (n > 0 && n % 10 === 0) { ms.textContent = `이번 달 ${n}번째 방문 달성! 정말 대단해요`; ms.classList.remove('hidden'); }
+  else ms.classList.add('hidden');
+  celWrap.classList.remove('hidden');
+  runConfetti(n % 10 === 0 ? 4000 : 2600);
+  playFanfare();
+  clearTimeout(celTimer);
+  celTimer = setTimeout(closeCelebrate, CELEBRATE_MS);
+}
+function closeCelebrate() {
+  clearTimeout(celTimer);
+  cancelAnimationFrame(confettiRaf);
+  celWrap.classList.add('hidden');
+}
+celWrap.addEventListener('click', closeCelebrate);
 
 /* ---------- 카메라 미리보기 ---------- */
 const preview = document.getElementById('preview');
@@ -350,6 +587,7 @@ function drawPreview() {
 
 /* ---------- 버튼 출석 ---------- */
 async function attendByButton() {
+  unlockAudio();
   if (!ready) { showMessage('아직 준비 중입니다', '잠시 후 다시 눌러 주세요.', 'warn', 3000); return; }
   if (sending || registering) return;
   if (!matcher) { showMessage('등록된 얼굴이 없습니다', '얼굴 등록 화면에서 이용자를 먼저 등록하세요.', 'warn', 4000); return; }
@@ -476,15 +714,23 @@ function applyMode(m) {
   mode = m;
   document.getElementById('tabAttend').classList.toggle('on', m === 'attend');
   document.getElementById('tabRegister').classList.toggle('on', m === 'register');
+  document.getElementById('tabApply').classList.toggle('on', m === 'apply');
   document.getElementById('attendPanel').classList.toggle('hidden', m !== 'attend');
   document.getElementById('registerPanel').classList.toggle('hidden', m !== 'register');
   document.getElementById('attendBtn').classList.toggle('hidden', m !== 'attend' || AUTO_MODE);
+  document.querySelector('.stage').classList.toggle('hidden', m === 'apply');
+  document.querySelector('.panel').classList.toggle('hidden', m === 'apply');
+  document.getElementById('applyView').classList.toggle('hidden', m !== 'apply');
   cooldownUntil = 0;
   resumeCamera();
-  idleMessage();
+  if (m === 'apply') { window.scrollTo(0, 0); requestAnimationFrame(setupSignPad); }
+  else idleMessage();
 }
+const ADMIN_MODES = ['register', 'apply'];
+let pendingMode = null;
 function setMode(m) {
-  if (m === 'register' && mode !== 'register') {
+  if (ADMIN_MODES.indexOf(m) !== -1 && ADMIN_MODES.indexOf(mode) === -1) {
+    pendingMode = m;
     document.getElementById('pinInput').value = '';
     document.getElementById('pinErr').textContent = '';
     document.getElementById('pinWrap').classList.remove('hidden');
@@ -496,7 +742,7 @@ function setMode(m) {
 function checkPin() {
   if (document.getElementById('pinInput').value === ADMIN_PIN) {
     document.getElementById('pinWrap').classList.add('hidden');
-    applyMode('register');
+    applyMode(pendingMode || 'register');
   } else {
     document.getElementById('pinErr').textContent = '비밀번호가 맞지 않습니다.';
   }
@@ -518,9 +764,133 @@ setInterval(resumeCamera, 2000);
 
 document.getElementById('tabAttend').onclick = () => setMode('attend');
 document.getElementById('tabRegister').onclick = () => setMode('register');
+document.getElementById('tabApply').onclick = () => setMode('apply');
+
+/* ---------- 이용 신청서 ---------- */
+const signPad = document.getElementById('signPad');
+let signCtx = null, signDrawn = false, signDrawing = false;
+
+function setupSignPad() {
+  const r = signPad.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = window.devicePixelRatio || 1;
+  signPad.width = Math.round(r.width * dpr);
+  signPad.height = Math.round(r.height * dpr);
+  signCtx = signPad.getContext('2d');
+  signCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  signCtx.lineWidth = 3.2; signCtx.lineCap = 'round'; signCtx.lineJoin = 'round'; signCtx.strokeStyle = '#111';
+  signDrawn = false;
+}
+function signPos(e) { const r = signPad.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+signPad.addEventListener('pointerdown', e => {
+  if (!signCtx) setupSignPad();
+  signDrawing = true; signPad.setPointerCapture(e.pointerId);
+  const p = signPos(e); signCtx.beginPath(); signCtx.moveTo(p.x, p.y);
+  signCtx.lineTo(p.x + 0.1, p.y + 0.1); signCtx.stroke();
+});
+signPad.addEventListener('pointermove', e => {
+  if (!signDrawing) return;
+  const p = signPos(e); signCtx.lineTo(p.x, p.y); signCtx.stroke(); signDrawn = true;
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(t => signPad.addEventListener(t, () => { signDrawing = false; }));
+document.getElementById('signClear').onclick = setupSignPad;
+
+/* 서명을 흰 바탕 PNG로 (가로 600px로 줄여서 전송) */
+function signatureData() {
+  const w = 600, h = Math.round(600 * signPad.height / signPad.width);
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+  x.drawImage(signPad, 0, 0, w, h);
+  return c.toDataURL('image/png');
+}
+
+/* 버튼형 선택 (성별, 이용료 구분, 동의 여부) */
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  seg.dataset.value = b.dataset.v;
+}));
+const segVal = n => document.querySelector(`.seg[data-name="${n}"]`).dataset.value || '';
+
+function fillConsentTable(id, obj) {
+  document.getElementById(id).innerHTML = Object.keys(obj).map(k => '<tr><th></th><td></td></tr>').join('');
+  const rows = document.getElementById(id).querySelectorAll('tr');
+  Object.keys(obj).forEach((k, i) => { rows[i].cells[0].textContent = k; rows[i].cells[1].textContent = obj[k]; });
+}
+function setupApplyForm() {
+  const ol = document.getElementById('apRules');
+  ol.innerHTML = '';
+  APPLY_RULES.forEach(t => { const li = document.createElement('li'); li.textContent = t; ol.appendChild(li); });
+  fillConsentTable('apPrivacyText', PRIVACY_TEXT);
+  fillConsentTable('apBioText', BIO_TEXT);
+  const d = new Date();
+  document.getElementById('apDate').textContent = `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+}
+function resetApplyForm() {
+  ['apName', 'apBirth', 'apPhone', 'apDisability', 'apAddress'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('apAgreeRules').checked = false;
+  document.querySelectorAll('#applyView .seg').forEach(seg => { delete seg.dataset.value; seg.querySelectorAll('button').forEach(b => b.classList.remove('on')); });
+  document.getElementById('apStatus').textContent = '';
+  setupSignPad();
+}
+function applyError(msg) {
+  const s = document.getElementById('apStatus');
+  s.className = 'ap-status'; s.textContent = msg;
+  s.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function submitApplication() {
+  const v = id => document.getElementById(id).value.trim();
+  const phoneDigits = v('apPhone').replace(/\D/g, '');
+  if (!v('apName')) return applyError('성명을 입력하세요.');
+  if (!v('apBirth')) return applyError('생년월일을 입력하세요.');
+  if (!segVal('gender')) return applyError('성별을 선택하세요.');
+  if (!/^0\d{8,10}$/.test(phoneDigits)) return applyError('연락처를 확인하세요 (예: 010-1234-5678).');
+  if (!segVal('category')) return applyError('이용료 구분을 선택하세요.');
+  if (!document.getElementById('apAgreeRules').checked) return applyError('이용규칙 동의에 체크해 주세요.');
+  if (!segVal('privacy')) return applyError('개인정보 수집·이용 동의 여부를 선택하세요.');
+  if (segVal('privacy') !== '동의') return applyError('개인정보 수집·이용에 동의해야 이용 신청을 할 수 있습니다.');
+  if (!segVal('bio')) return applyError('생체인식정보(얼굴) 동의 여부를 선택하세요.');
+  if (!signDrawn) return applyError('서명 칸에 서명해 주세요.');
+
+  const btn = document.getElementById('apSubmit');
+  btn.disabled = true; btn.textContent = '저장 중입니다…';
+  const s = document.getElementById('apStatus'); s.className = 'ap-status ok'; s.textContent = '신청서를 저장하고 있습니다. 잠시만 기다려 주세요.';
+  try {
+    const r = await apiPost({
+      action: 'apply', name: v('apName'), birth: v('apBirth'), gender: segVal('gender'), phone: v('apPhone'),
+      disability: v('apDisability'), category: segVal('category'), address: v('apAddress'),
+      agreeRules: true, privacy: segVal('privacy'), bio: segVal('bio'), signature: signatureData(),
+      rules: APPLY_RULES, privacyText: PRIVACY_TEXT, bioText: BIO_TEXT
+    });
+    if (!r.ok) { applyError(r.message); return; }
+    resetApplyForm();
+    await loadUsers();
+    const extra = r.warning ? ' (' + r.warning + ')' : '';
+    if (r.bio) {
+      applyMode('register');
+      regExisting.value = r.id;
+      document.getElementById('regName').value = '';
+      document.getElementById('regConsent').checked = true;
+      document.getElementById('regBioConsent').checked = true;
+      showMessage(`${r.name}님 신청 완료`, `이용자번호 ${r.id}. 이어서 얼굴을 등록합니다. 카메라 정면을 보고 [얼굴 등록 시작]을 눌러 주세요.${extra}`, 'ok');
+    } else {
+      applyMode('attend');
+      showMessage(`${r.name}님 신청 완료`, `이용자번호 ${r.id}. 생체정보 미동의로 수동 출석으로 이용합니다.${extra}`, 'ok', 9000);
+    }
+  } catch (e) {
+    applyError('연결 오류로 저장하지 못했습니다. 인터넷 연결을 확인하고 다시 제출해 주세요.');
+  } finally {
+    btn.disabled = false; btn.textContent = '신청서 제출';
+  }
+}
+document.getElementById('apSubmit').onclick = submitApplication;
+window.addEventListener('orientationchange', () => { if (mode === 'apply' && !signDrawn) setTimeout(setupSignPad, 300); });
+setupApplyForm();
 document.getElementById('regBtn').onclick = registerFace;
 document.getElementById('attendBtn').onclick = attendByButton;
 document.getElementById('manualBtn').onclick = () => {
+  unlockAudio();
   const id = manualSelect.value;
   if (!id) { showMessage('이름을 선택하세요', '', 'err', 3000); return; }
   attend(id, '수동');
